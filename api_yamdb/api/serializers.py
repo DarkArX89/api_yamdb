@@ -2,6 +2,8 @@ from django.shortcuts import get_object_or_404
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import update_last_login
 
+from datetime import date
+
 from rest_framework import serializers, exceptions
 from rest_framework.relations import SlugRelatedField
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -148,3 +150,15 @@ class TitleSerializer(serializers.ModelSerializer):
                 genre_id=current_genre, title_id=title
             )
         return title 
+
+    def validate(self, data):
+        if data.get('year') > date.today().year:
+            raise serializers.ValidationError('Год не может быть больше текущего!')
+        category_slug = self.initial_data.get('category')
+        if not Category.objects.filter(slug=category_slug).exists():
+            raise serializers.ValidationError('Указана несуществующая категория!')
+        genre_slugs = self.initial_data.get('genre')
+        for slug in genre_slugs:
+            if not Genre.objects.filter(slug=slug).exists():
+                raise serializers.ValidationError('Указан несуществующий жанр!')
+        return data

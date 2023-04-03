@@ -119,6 +119,7 @@ class TitleFilterSet(FilterSet):
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.all()
     serializer_class = TitleSerializer
+    #permission_classes = (AdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filter_class = TitleFilterSet
 
@@ -139,6 +140,7 @@ class CategoryViewSet(CreateListDestroyRetrieveViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     lookup_field = 'slug'
+    #permission_classes = (AdminOrReadOnly,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
 
@@ -147,5 +149,6 @@ class GenreViewSet(CreateListDestroyRetrieveViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     lookup_field = 'slug'
+    #permission_classes = (AdminOrReadOnly,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
