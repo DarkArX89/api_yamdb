@@ -1,9 +1,14 @@
-from rest_framework import serializers, exceptions
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.settings import api_settings
-from users.models import User
+from django.shortcuts import get_object_or_404
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import update_last_login
+
+from rest_framework import serializers, exceptions
+from rest_framework.relations import SlugRelatedField
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.settings import api_settings
+
+from reviews.models import Title, Category, Genre, GenreTitle
+from users.models import User
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -56,3 +61,46 @@ class UserTokenSerializer(TokenObtainPairSerializer):
             update_last_login(None, self.user)
 
         return data
+
+
+class CategorySerializer(serializers.ModelSerializer):
+
+    class Meta:
+        fields = ('name', 'slug')
+        model = Category
+
+
+class GenreSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        fields = ('name', 'slug')
+        model = Genre
+
+
+class SlugDictRelatedField(SlugRelatedField):
+    def to_representation(self, obj):
+        result = {
+            "name": obj.name,
+            "slug": obj.slug
+        }
+        return result
+
+class TitleSerializer(serializers.ModelSerializer):
+    category = CategorySerializer(read_only=True)
+    genre = SlugDictRelatedField(many=True, read_only=True, slug_field='name')
+
+    class Meta:
+        fields = (
+            'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
+        )
+        model = Title
+
+    def create(self, validated_data):
+        genres = self.initial_data.get('genre')
+        title = Title.objects.create(**validated_data)
+        for genre in genres:
+            current_genre = get_object_or_404(Genre, slug=genre)
+            GenreTitle.objects.create(
+                genre_id=current_genre, title_id=title
+            )
+        return title 
