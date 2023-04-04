@@ -15,7 +15,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from reviews.models import Title, Category, Genre, Review
 from users.models import ConfirmationCode, User
-from .permissions import AdminOrReadOnly
+from .permissions import AdminOrReadOnly, AdministratorOrReadOnly
 from .serializers import (
     UserSerializer, UserSignUpSerializer, UserTokenSerializer, 
     TitleSerializer, CategorySerializer, GenreSerializer,
@@ -119,36 +119,35 @@ class TitleFilterSet(FilterSet):
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.all()
     serializer_class = TitleSerializer
-    #permission_classes = (AdminOrReadOnly,)
+    permission_classes = (AdministratorOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
-    filter_class = TitleFilterSet
+    filterset_class = TitleFilterSet
 
-    def perform_create(self, serializer):
-        category_slug = self.request.data.get("category")
-        category_obj = get_object_or_404(Category, slug=category_slug)
-        serializer.save(category=category_obj)
+    # def perform_create(self, serializer):
+    #     category_slug = self.request.data.get("category")
+    #     category_obj = get_object_or_404(Category, slug=category_slug)
+    #     serializer.save(category=category_obj)
 
 
-class CreateListDestroyRetrieveViewSet(
+class CreateListDestroyViewSet(
     mixins.CreateModelMixin, mixins.ListModelMixin, mixins.DestroyModelMixin,
-    mixins.RetrieveModelMixin, viewsets.GenericViewSet
-):
+    viewsets.GenericViewSet):
     pass
 
 
-class CategoryViewSet(CreateListDestroyRetrieveViewSet):
+class CategoryViewSet(CreateListDestroyViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     lookup_field = 'slug'
-    #permission_classes = (AdminOrReadOnly,)
+    permission_classes = (AdministratorOrReadOnly,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
 
 
-class GenreViewSet(CreateListDestroyRetrieveViewSet):
+class GenreViewSet(CreateListDestroyViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     lookup_field = 'slug'
-    #permission_classes = (AdminOrReadOnly,)
+    permission_classes = (AdministratorOrReadOnly,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
