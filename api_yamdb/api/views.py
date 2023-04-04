@@ -3,23 +3,25 @@ import string
 
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import send_mail
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 
-from django_filters.rest_framework import DjangoFilterBackend, FilterSet, AllValuesFilter
+# from django_filters.rest_framework import DjangoFilterBackend, FilterSet, AllValuesFilter
 
-from rest_framework import generics, permissions, status, viewsets, mixins, filters
+from rest_framework import filters, generics, mixins, permissions, status, viewsets
 from rest_framework.filters import SearchFilter
-from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.exceptions import AuthenticationFailed
+
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 
-from reviews.models import Title, Category, Genre, Review
+from reviews.models import Category, Genre, Review, Title
 from users.models import ConfirmationCode, User
-from .permissions import AdminOrReadOnly
+from .permissions import AdminOnly, AdminOrReadOnly
 from .serializers import (
-    UserSerializer, UserSignUpSerializer, UserTokenSerializer, 
+    UserSerializer, UserSignUpSerializer, UserTokenSerializer,
     TitleSerializer, CategorySerializer, GenreSerializer,
-    CommentSerializer, ReviewSerializer
+    CommentSerializer, ReviewSerializer, MeUserSerializer
 )
 
 
@@ -54,10 +56,9 @@ class CommentViewSet(viewsets.ModelViewSet):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = (AdminOrReadOnly,)
-    pagination_class = LimitOffsetPagination
+    permission_classes = (AdminOnly,)
     filter_backends = (SearchFilter,)
-    search_fields = ('username')
+    search_fields = ('username',)
     http_method_names = ['get', 'post', 'patch', 'delete']
     lookup_field = 'username'
     lookup_url_kwarg = 'username'
@@ -65,14 +66,14 @@ class UserViewSet(viewsets.ModelViewSet):
 
 class MeUserApiView(generics.RetrieveUpdateAPIView):
     queryset = User.objects.all()
-    serializer_class = UserSerializer
+    serializer_class = MeUserSerializer
     permission_classes = (permissions.IsAuthenticated,)
 
     def get_object(self):
         return self.request.user
 
 
-class SignUpUserView(generics.CreateAPIView):
+class SignUpUserView(generics.GenericAPIView):
     queryset = User.objects.all()
     serializer_class = UserSignUpSerializer
     permission_classes = (permissions.AllowAny,)
@@ -80,7 +81,19 @@ class SignUpUserView(generics.CreateAPIView):
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()
+            if User.objects.filter(
+                Q(Q(username=serializer.validated_data.get('username'))
+                  & ~Q(email=serializer.validated_data.get('email')))
+                | Q(Q(email=serializer.validated_data.get('email'))
+                    & ~Q(username=serializer.validated_data.get('username')))
+            ).exists():
+                return Response(
+                    {'error': 'Такой email или username уже существует'},
+                    status=status.HTTP_400_BAD_REQUEST)
+            user, _ = User.objects.get_or_create(
+                username=serializer.validated_data.get('username'),
+                email=serializer.validated_data.get('email'),
+            )
             confirmation_code = ''.join(
                 random.choices(string.ascii_uppercase + string.digits, k=6)
             )
@@ -105,23 +118,36 @@ class UserToken(TokenObtainPairView):
     serializer_class = UserTokenSerializer
     permission_classes = (permissions.AllowAny,)
 
+    def post(self, request, *args, **kwargs):
+        username = request.data.get('username')
+        if username:
+            get_object_or_404(User, username=username)
+        serializer = self.get_serializer(data=request.data)
 
-class TitleFilterSet(FilterSet):
-    slug = AllValuesFilter(field_name='category__slug')
-    name = AllValuesFilter(field_name='name')
-    year = AllValuesFilter(field_name='year')
+        try:
+            serializer.is_valid(raise_exception=True)
+        except AuthenticationFailed:
+            return Response({'error': 'Invalid confirmation code!'},
+                            status=status.HTTP_400_BAD_REQUEST
+                            )
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
-    class Meta:
-        model = Title
-        fields = ('slug', 'name', 'year')
+# class TitleFilterSet(FilterSet):
+#     #slug = AllValuesFilter(field_name='category__slug')
+#     #name = AllValuesFilter(field_name='name')
+#     #year = AllValuesFilter(field_name='year')
+
+#     class Meta:
+#         model = Title
+#         fields = ('slug', 'name', 'year')
 
 
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.all()
     serializer_class = TitleSerializer
-    #permission_classes = (AdminOrReadOnly,)
-    filter_backends = (DjangoFilterBackend,)
-    filter_class = TitleFilterSet
+    permission_classes = (AdminOrReadOnly,)
+    # filter_backends = (DjangoFilterBackend,)
+    # filter_class = TitleFilterSet
 
     def perform_create(self, serializer):
         category_slug = self.request.data.get("category")
@@ -140,8 +166,8 @@ class CategoryViewSet(CreateListDestroyRetrieveViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     lookup_field = 'slug'
-    #permission_classes = (AdminOrReadOnly,)
-    filter_backends = (filters.SearchFilter,)
+    permission_classes = (AdminOrReadOnly,)
+    # filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
 
 
@@ -149,6 +175,6 @@ class GenreViewSet(CreateListDestroyRetrieveViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     lookup_field = 'slug'
-    #permission_classes = (AdminOrReadOnly,)
+    permission_classes = (AdminOrReadOnly,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
