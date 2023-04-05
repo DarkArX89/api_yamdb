@@ -4,6 +4,7 @@ from django.contrib.auth.models import update_last_login
 
 from datetime import date
 
+from django.db.models import Avg
 from rest_framework import serializers, exceptions
 from rest_framework.relations import SlugRelatedField
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -141,6 +142,7 @@ class TitleSerializer(serializers.ModelSerializer):
         queryset=Genre.objects.all(),
         many=True, slug_field='slug'
     )
+    rating = serializers.SerializerMethodField()
     #GenreSerializer(many=True, read_only=True)
 
     class Meta:
@@ -149,6 +151,11 @@ class TitleSerializer(serializers.ModelSerializer):
         )
         model = Title
         read_only_fields = ('rating',)
+
+    def get_rating(self, obj):
+        rating = Review.objects.filter(
+            title=obj.id).aggregate(Avg('score'))
+        return rating['score__avg']
 
     def validate_year(self, value):
         if value > date.today().year:

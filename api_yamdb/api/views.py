@@ -15,7 +15,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from reviews.models import Title, Category, Genre, Review
 from users.models import ConfirmationCode, User
-from .permissions import AdminOrReadOnly, AdministratorOrReadOnly
+from .permissions import AdminOrReadOnly, AdministratorOrReadOnly, AuthorOrReadOnly
 from .serializers import (
     UserSerializer, UserSignUpSerializer, UserTokenSerializer, 
     TitleSerializer, CategorySerializer, GenreSerializer,
@@ -25,6 +25,8 @@ from .serializers import (
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
+    permission_classes = [AuthorOrReadOnly]
+    
 
     def get_queryset(self):
         title = get_object_or_404(Title, pk=self.kwargs.get("title_id"))
@@ -39,6 +41,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
+    permission_classes = [AuthorOrReadOnly]
 
     def get_queryset(self):
         review = get_object_or_404(Review, pk=self.kwargs.get("review_id"))
