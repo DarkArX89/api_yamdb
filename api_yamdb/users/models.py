@@ -12,9 +12,9 @@ REGEX = '^[\w.@+-]+\Z'
 
 class User(AbstractUser):
     USER_ROLES = [
-        (USER, 'User'),
-        (ADMIN, 'Administrator'),
-        (MODERATOR, 'Moderator'),
+        (USER, 'user'),
+        (ADMIN, 'administrator'),
+        (MODERATOR, 'moderator'),
     ]
 
     username = models.CharField(max_length=150,
