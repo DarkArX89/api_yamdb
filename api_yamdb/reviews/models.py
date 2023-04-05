@@ -7,28 +7,35 @@ class Category(models.Model):
     name = models.CharField('Категория', max_length=256)
     slug = models.SlugField(unique=True, max_length=50)
 
-    # def __str__(self):
-    #     return f'{self.name} {self.slug}'
+    class Meta:
+        ordering = ['-id']
 
 
 class Genre(models.Model):
     name = models.CharField('Жанр', max_length=256)
     slug = models.SlugField(unique=True, max_length=50)
 
+    class Meta:
+        ordering = ['-id']
+
 
 class Title(models.Model):
     name = models.CharField('Название', max_length=256)
     year = models.IntegerField('Год выпуска')
-    rating = models.IntegerField('Рейтинг', default=None, blank=True, null=True)
+    rating = models.IntegerField('Рейтинг', default=None, blank=True,
+                                 null=True)
     description = models.TextField('Описание', blank=True, null=True)
     category = models.ForeignKey(
-        Category, 
+        Category,
         on_delete=models.SET_NULL,
         related_name='titles',
         blank=True,
         null=True
     )
     genre = models.ManyToManyField(Genre, through='GenreTitle')
+
+    class Meta:
+        ordering = ['-id']
 
 
 class GenreTitle(models.Model):
@@ -37,6 +44,7 @@ class GenreTitle(models.Model):
 
     def __str__(self):
         return f'{self.title_id} {self.genre_id}'
+
 
 class Review(models.Model):
     title = models.ForeignKey(
@@ -80,6 +88,7 @@ class Review(models.Model):
                 name='unique_review'
             ),
         ]
+
 
 class Comment(models.Model):
     review = models.ForeignKey(

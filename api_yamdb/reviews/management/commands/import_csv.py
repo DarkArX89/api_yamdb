@@ -5,6 +5,7 @@ from django.core.management.base import BaseCommand
 from reviews.models import Title, Genre, Category, GenreTitle, Review, Comment
 from users.models import User
 
+
 class Command(BaseCommand):
     help = 'Import data from CSV to db.sqlite3'
     file_dict = {
@@ -16,7 +17,7 @@ class Command(BaseCommand):
         'review': Review,
         'comments': Comment
     }
-    
+
     def handle(self, *args, **options):
         for current_file, model in self.file_dict.items():
             current_file = 'static/data/' + current_file + '.csv'

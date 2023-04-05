@@ -7,7 +7,7 @@ USER = 'user'
 ADMIN = 'admin'
 MODERATOR = 'moderator'
 
-REGEX = '^[\w.@+-]+\Z'
+REGEX = r'^[\w.@+-]+\Z'
 
 
 class User(AbstractUser):

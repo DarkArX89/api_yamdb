@@ -12,7 +12,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework.exceptions import ValidationError
 
-from reviews.models import Category, Comment, Genre, GenreTitle, Review, Title
+from reviews.models import Category, Comment, Genre, Review, Title
 from users.models import REGEX, User
 
 
@@ -108,7 +108,7 @@ class UserTokenSerializer(TokenObtainPairSerializer):
         authenticate_kwargs = {
             self.username_field: attrs[self.username_field],
             'confirmation_code': attrs['confirmation_code'],
-            }
+        }
         try:
             authenticate_kwargs['request'] = self.context['request']
         except KeyError:
@@ -180,5 +180,7 @@ class TitleSerializer(serializers.ModelSerializer):
 
     def validate_year(self, value):
         if value > date.today().year:
-            raise serializers.ValidationError('Год не может быть больше текущего!')
+            raise serializers.ValidationError(
+                'Год не может быть больше текущего!'
+            )
         return value

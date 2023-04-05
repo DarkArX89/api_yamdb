@@ -6,9 +6,11 @@ from django.core.mail import send_mail
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
 
-# from django_filters.rest_framework import DjangoFilterBackend, FilterSet, AllValuesFilter
+from django_filters.rest_framework import (DjangoFilterBackend, FilterSet,
+                                           AllValuesFilter)
 
-from rest_framework import filters, generics, mixins, permissions, status, viewsets
+from rest_framework import (filters, generics, mixins, permissions, status,
+                            viewsets)
 from rest_framework.filters import SearchFilter
 from rest_framework.exceptions import AuthenticationFailed
 
@@ -28,12 +30,10 @@ from .serializers import (
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
-    permission_classes = [AuthorOrReadOnly]
-    
+    permission_classes = (AuthorOrReadOnly,)
 
     def get_queryset(self):
         title = get_object_or_404(Title, pk=self.kwargs.get("title_id"))
-
         return title.reviews.all()
 
     def perform_create(self, serializer):
@@ -44,8 +44,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
-    permission_classes = [AuthorOrReadOnly]
-
+    permission_classes = (AuthorOrReadOnly,)
 
     def get_queryset(self):
         review = get_object_or_404(Review, pk=self.kwargs.get("review_id"))
@@ -157,9 +156,9 @@ class TitleViewSet(viewsets.ModelViewSet):
     filterset_class = TitleFilterSet
 
 
-class CreateListDestroyViewSet(
-    mixins.CreateModelMixin, mixins.ListModelMixin, mixins.DestroyModelMixin,
-    viewsets.GenericViewSet):
+class CreateListDestroyViewSet(mixins.CreateModelMixin, mixins.ListModelMixin,
+                               mixins.DestroyModelMixin,
+                               viewsets.GenericViewSet):
     pass
 
 
