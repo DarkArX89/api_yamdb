@@ -1,19 +1,19 @@
-from django.shortcuts import get_object_or_404
-from django.contrib.auth import authenticate
-from django.contrib.auth.models import update_last_login
-
 from datetime import date
 
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import update_last_login
+from django.core.validators import RegexValidator
+from django.shortcuts import get_object_or_404
 from django.db.models import Avg
+
 from rest_framework import serializers, exceptions
 from rest_framework.relations import SlugRelatedField
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework.exceptions import ValidationError
-from rest_framework.validators import UniqueValidator
 
-from reviews.models import Title, Category, Genre, GenreTitle, Comment, Review
-from users.models import User
+from reviews.models import Category, Comment, Genre, GenreTitle, Review, Title
+from users.models import REGEX, User
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -63,15 +63,37 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
+            'username', 'email', 'first_name', 'last_name', 'bio', 'role'
+        )
+
+
+class MeUserSerializer(serializers.ModelSerializer):
+    role = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = (
             'id', 'username', 'email', 'first_name', 'last_name', 'bio', 'role'
         )
 
 
 class UserSignUpSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(
+        max_length=150,
+        validators=[RegexValidator(REGEX)]
+    )
+    email = serializers.EmailField(max_length=254)
 
     class Meta:
         model = User
-        fields = ['email', 'username']
+        fields = ('username', 'email',)
+
+    def validate_username(self, value):
+        if value == 'me':
+            raise serializers.ValidationError(
+                'Значение username не можеть быть "mе"'
+            )
+        return value
 
 
 class UserTokenSerializer(TokenObtainPairSerializer):
@@ -132,18 +154,17 @@ class SlugDictRelatedField(SlugRelatedField):
         }
         return result
 
+
 class TitleSerializer(serializers.ModelSerializer):
     category = SlugDictRelatedField(
         queryset=Category.objects.all(),
         slug_field='slug'
     )
-    #CategorySerializer(read_only=True)
     genre = SlugDictRelatedField(
         queryset=Genre.objects.all(),
         many=True, slug_field='slug'
     )
     rating = serializers.SerializerMethodField()
-    #GenreSerializer(many=True, read_only=True)
 
     class Meta:
         fields = (
@@ -161,24 +182,3 @@ class TitleSerializer(serializers.ModelSerializer):
         if value > date.today().year:
             raise serializers.ValidationError('Год не может быть больше текущего!')
         return value
-    # def create(self, validated_data):
-    #     genres = self.initial_data.get('genre')
-    #     title = Title.objects.create(**validated_data)
-    #     for genre in genres:
-    #         current_genre = get_object_or_404(Genre, slug=genre)
-    #         GenreTitle.objects.create(
-    #             genre_id=current_genre, title_id=title
-    #         )
-    #     return title 
-
-    # def validate(self, data):
-    #     if data.get('year') > date.today().year:
-    #         raise serializers.ValidationError('Год не может быть больше текущего!')
-        # category_slug = self.initial_data.get('category')
-        # if not Category.objects.filter(slug=category_slug).exists():
-        #     raise serializers.ValidationError('Указана несуществующая категория!')
-        # genre_slugs = self.initial_data.get('genre')
-        # for slug in genre_slugs:
-        #     if not Genre.objects.filter(slug=slug).exists():
-        #         raise serializers.ValidationError('Указан несуществующий жанр!')
-        # return data
