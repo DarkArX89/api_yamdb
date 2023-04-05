@@ -40,6 +40,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = CommentSerializer
 
+
     def get_queryset(self):
         review = get_object_or_404(Review, pk=self.kwargs.get("review_id"))
         return review.comments.all()
@@ -107,13 +108,14 @@ class UserToken(TokenObtainPairView):
 
 
 class TitleFilterSet(FilterSet):
-    slug = AllValuesFilter(field_name='category__slug')
+    category = AllValuesFilter(field_name='category__slug')
+    genre = AllValuesFilter(field_name='genre__slug')
     name = AllValuesFilter(field_name='name')
     year = AllValuesFilter(field_name='year')
 
     class Meta:
         model = Title
-        fields = ('slug', 'name', 'year')
+        fields = ('category', 'genre', 'name', 'year')
 
 
 class TitleViewSet(viewsets.ModelViewSet):
@@ -122,11 +124,6 @@ class TitleViewSet(viewsets.ModelViewSet):
     permission_classes = (AdministratorOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
     filterset_class = TitleFilterSet
-
-    # def perform_create(self, serializer):
-    #     category_slug = self.request.data.get("category")
-    #     category_obj = get_object_or_404(Category, slug=category_slug)
-    #     serializer.save(category=category_obj)
 
 
 class CreateListDestroyViewSet(
