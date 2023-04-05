@@ -4,22 +4,22 @@ from users.models import User
 
 
 class Category(models.Model):
-    name = models.CharField('Категория', max_length=50)
-    slug = models.SlugField(unique=True)
+    name = models.CharField('Категория', max_length=256)
+    slug = models.SlugField(unique=True, max_length=50)
 
     # def __str__(self):
     #     return f'{self.name} {self.slug}'
 
 
 class Genre(models.Model):
-    name = models.CharField('Жанр', max_length=50)
-    slug = models.SlugField(unique=True)
+    name = models.CharField('Жанр', max_length=256)
+    slug = models.SlugField(unique=True, max_length=50)
 
 
 class Title(models.Model):
-    name = models.CharField('Название', max_length=200)
+    name = models.CharField('Название', max_length=256)
     year = models.IntegerField('Год выпуска')
-    rating = models.IntegerField('Рейтинг', default=0)
+    rating = models.IntegerField('Рейтинг', default=None, blank=True, null=True)
     description = models.TextField('Описание', blank=True, null=True)
     category = models.ForeignKey(
         Category, 

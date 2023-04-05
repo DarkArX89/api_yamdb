@@ -155,33 +155,23 @@ class SlugDictRelatedField(SlugRelatedField):
 
 
 class TitleSerializer(serializers.ModelSerializer):
-    category = CategorySerializer(read_only=True)
-    genre = SlugDictRelatedField(many=True, read_only=True, slug_field='name')
+    category = SlugDictRelatedField(
+        queryset=Category.objects.all(),
+        slug_field='slug'
+    )
+    genre = SlugDictRelatedField(
+        queryset=Genre.objects.all(),
+        many=True, slug_field='slug'
+    )
 
     class Meta:
         fields = (
             'id', 'name', 'year', 'rating', 'description', 'genre', 'category'
         )
         model = Title
+        read_only_fields = ('rating',)
 
-    def create(self, validated_data):
-        genres = self.initial_data.get('genre')
-        title = Title.objects.create(**validated_data)
-        for genre in genres:
-            current_genre = get_object_or_404(Genre, slug=genre)
-            GenreTitle.objects.create(
-                genre_id=current_genre, title_id=title
-            )
-        return title
-
-    def validate(self, data):
-        if data.get('year') > date.today().year:
+    def validate_year(self, value):
+        if value > date.today().year:
             raise serializers.ValidationError('Год не может быть больше текущего!')
-        category_slug = self.initial_data.get('category')
-        if not Category.objects.filter(slug=category_slug).exists():
-            raise serializers.ValidationError('Указана несуществующая категория!')
-        genre_slugs = self.initial_data.get('genre')
-        for slug in genre_slugs:
-            if not Genre.objects.filter(slug=slug).exists():
-                raise serializers.ValidationError('Указан несуществующий жанр!')
-        return data
+        return value
