@@ -10,6 +10,9 @@ class Category(models.Model):
     class Meta:
         ordering = ['-id']
 
+    def __str__(self):
+        return self.name
+
 
 class Genre(models.Model):
     name = models.CharField('Жанр', max_length=256)
@@ -18,10 +21,13 @@ class Genre(models.Model):
     class Meta:
         ordering = ['-id']
 
+    def __str__(self):
+        return self.name
+
 
 class Title(models.Model):
     name = models.CharField('Название', max_length=256)
-    year = models.IntegerField('Год выпуска')
+    year = models.PositiveIntegerField('Год выпуска', db_index=True)
     rating = models.IntegerField('Рейтинг', default=None, blank=True,
                                  null=True)
     description = models.TextField('Описание', blank=True, null=True)
@@ -36,11 +42,17 @@ class Title(models.Model):
 
     class Meta:
         ordering = ['-id']
+    
+    def __str__(self):
+        return self.name
 
 
 class GenreTitle(models.Model):
     title_id = models.ForeignKey(Title, on_delete=models.CASCADE)
     genre_id = models.ForeignKey(Genre, on_delete=models.CASCADE)
+
+    class Meta:
+        ordering = ['-id']
 
     def __str__(self):
         return f'{self.title_id} {self.genre_id}'
@@ -75,9 +87,6 @@ class Review(models.Model):
         db_index=True
     )
 
-    def __str__(self):
-        return self.text
-
     class Meta:
         verbose_name = 'Отзыв'
         verbose_name_plural = 'Отзывы'
@@ -88,6 +97,9 @@ class Review(models.Model):
                 name='unique_review'
             ),
         ]
+
+    def __str__(self):
+        return self.text
 
 
 class Comment(models.Model):
@@ -114,10 +126,10 @@ class Comment(models.Model):
         db_index=True
     )
 
-    def __str__(self):
-        return self.text
-
     class Meta:
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
         ordering = ['pub_date']
+
+    def __str__(self):
+        return self.text
