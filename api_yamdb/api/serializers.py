@@ -164,7 +164,9 @@ class TitleSerializer(serializers.ModelSerializer):
         queryset=Genre.objects.all(),
         many=True, slug_field='slug'
     )
-    rating = serializers.SerializerMethodField()
+    rating = serializers.IntegerField(
+        source='reviews__score__avg', read_only=True
+    )
 
     class Meta:
         fields = (
@@ -172,11 +174,6 @@ class TitleSerializer(serializers.ModelSerializer):
         )
         model = Title
         read_only_fields = ('rating',)
-
-    def get_rating(self, obj):
-        rating = Review.objects.filter(
-            title=obj.id).aggregate(Avg('score'))
-        return rating['score__avg']
 
     def validate_year(self, value):
         if value > date.today().year:
