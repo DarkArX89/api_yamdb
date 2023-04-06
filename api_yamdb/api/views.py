@@ -83,9 +83,9 @@ class SignUpUserView(generics.GenericAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user, _ = User.objects.get_or_create(
-                username=serializer.validated_data.get('username'),
-                email=serializer.validated_data.get('email'),
-            )
+            username=serializer.validated_data.get('username'),
+            email=serializer.validated_data.get('email'),
+        )
         confirmation_code = default_token_generator.make_token(user)
         code = ConfirmationCode.objects.create(
             user=user, confirmation_code=confirmation_code
