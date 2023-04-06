@@ -1,8 +1,9 @@
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import send_mail
+from django.db.models import Avg
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
-
 from django_filters.rest_framework import (DjangoFilterBackend, FilterSet,
                                            AllValuesFilter)
 
@@ -43,7 +44,8 @@ class CommentViewSet(viewsets.ModelViewSet):
     permission_classes = (AuthorOrReadOnly,)
 
     def get_queryset(self):
-        review = get_object_or_404(Review, pk=self.kwargs.get("review_id"))
+        review = get_object_or_404(Review, id=self.kwargs.get("review_id"),
+                                   title_id=self.kwargs.get("title_id"))
         return review.comments.all()
 
     def perform_create(self, serializer):
@@ -125,7 +127,9 @@ class TitleFilterSet(FilterSet):
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.all()
+    queryset = Title.objects.all().annotate(
+        Avg("reviews__score")
+    ).order_by("name")
     serializer_class = TitleSerializer
     permission_classes = (AdminOrReadOnly,)
     filter_backends = (DjangoFilterBackend,)
