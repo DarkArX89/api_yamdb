@@ -145,8 +145,8 @@ class GenreSerializer(serializers.ModelSerializer):
 class SlugDictRelatedField(SlugRelatedField):
     def to_representation(self, obj):
         result = {
-            "name": obj.name,
-            "slug": obj.slug
+            'name': obj.name,
+            'slug': obj.slug
         }
         return result
 

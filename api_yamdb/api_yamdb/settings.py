@@ -139,7 +139,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
 EMAIL_FILE_PATH = os.path.join(BASE_DIR, 'sent_emails')
 
 SIMPLE_JWT = {
-    "AUTH_HEADER_TYPES": ('Bearer',),
-    "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
-    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
 }
