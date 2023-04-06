@@ -1,19 +1,18 @@
 from datetime import date
 
-from django.contrib.auth import authenticate
-from django.contrib.auth.models import update_last_login
 from django.core.validators import RegexValidator
 from django.shortcuts import get_object_or_404
-from django.db.models import Avg
+from django.db.models import Avg, Q
 
-from rest_framework import serializers, exceptions
+from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.settings import api_settings
 from rest_framework.exceptions import ValidationError
 
 from reviews.models import Category, Comment, Genre, Review, Title
-from users.models import REGEX, User
+from users.models import ConfirmationCode, User
+
+
+REGEX = r'^[\w.@+-]+\Z'
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -95,41 +94,38 @@ class UserSignUpSerializer(serializers.ModelSerializer):
             )
         return value
 
-
-class UserTokenSerializer(TokenObtainPairSerializer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.fields[self.username_field] = serializers.CharField()
-        self.fields['confirmation_code'] = serializers.CharField()
-        self.fields.pop('password')
-
-    def validate(self, attrs):
-        authenticate_kwargs = {
-            self.username_field: attrs[self.username_field],
-            'confirmation_code': attrs['confirmation_code'],
-        }
-        try:
-            authenticate_kwargs['request'] = self.context['request']
-        except KeyError:
-            pass
-        self.user = authenticate(**authenticate_kwargs)
-        if not api_settings.USER_AUTHENTICATION_RULE(self.user):
-            raise exceptions.AuthenticationFailed(
-                self.error_messages['no_active_account'],
-                'no_active_account',
+    def validate(self, data):
+        if User.objects.filter(
+            Q(Q(username=data.get('username'))
+              & ~Q(email=data.get('email')))
+            | Q(Q(email=data.get('email'))
+                & ~Q(username=data.get('username')))):
+            raise serializers.ValidationError(
+                'Такой email или username уже существует'
             )
-        refresh = self.get_token(self.user)
-
-        data = {}
-
-        data['refresh'] = str(refresh)
-        data['access'] = str(refresh.access_token)
-
-        if api_settings.UPDATE_LAST_LOGIN:
-            update_last_login(None, self.user)
-
         return data
+
+
+class UserTokenSerializer(serializers.ModelSerializer):
+    username = serializers.CharField()
+    confirmation_code = serializers.SlugRelatedField(
+        queryset=ConfirmationCode.objects.all(),
+        slug_field='confirmation_code')
+
+    class Meta:
+        model = User
+        fields = ('username', 'confirmation_code')
+
+    def validate_confirmation_code(self, value):
+        user = get_object_or_404(User, username=self.username)
+        confirmation_code = get_object_or_404(ConfirmationCode, user=user)
+        if value != confirmation_code:
+            raise serializers.ValidationError()
+        return value
+
+    def validate_username(self, value):
+        get_object_or_404(User, username=value)
+        return value
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -149,8 +145,8 @@ class GenreSerializer(serializers.ModelSerializer):
 class SlugDictRelatedField(SlugRelatedField):
     def to_representation(self, obj):
         result = {
-            "name": obj.name,
-            "slug": obj.slug
+            'name': obj.name,
+            'slug': obj.slug
         }
         return result
 
@@ -164,7 +160,9 @@ class TitleSerializer(serializers.ModelSerializer):
         queryset=Genre.objects.all(),
         many=True, slug_field='slug'
     )
-    rating = serializers.SerializerMethodField()
+    rating = serializers.IntegerField(
+        source='reviews__score__avg', read_only=True
+    )
 
     class Meta:
         fields = (
@@ -172,11 +170,6 @@ class TitleSerializer(serializers.ModelSerializer):
         )
         model = Title
         read_only_fields = ('rating',)
-
-    def get_rating(self, obj):
-        rating = Review.objects.filter(
-            title=obj.id).aggregate(Avg('score'))
-        return rating['score__avg']
 
     def validate_year(self, value):
         if value > date.today().year:
