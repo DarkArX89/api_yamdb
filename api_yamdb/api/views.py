@@ -1,19 +1,15 @@
-import random
-import string
-
+from django.contrib.auth.tokens import default_token_generator
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import send_mail
 from django.db.models import Avg
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-
 from django_filters.rest_framework import (DjangoFilterBackend, FilterSet,
                                            AllValuesFilter)
 
 from rest_framework import (filters, generics, mixins, permissions, status,
                             viewsets)
 from rest_framework.filters import SearchFilter
-from rest_framework.exceptions import AuthenticationFailed
 
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -86,38 +82,24 @@ class SignUpUserView(generics.GenericAPIView):
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
-        if serializer.is_valid():
-            if User.objects.filter(
-                Q(Q(username=serializer.validated_data.get('username'))
-                  & ~Q(email=serializer.validated_data.get('email')))
-                | Q(Q(email=serializer.validated_data.get('email'))
-                    & ~Q(username=serializer.validated_data.get('username')))
-            ).exists():
-                return Response(
-                    {'error': 'Такой email или username уже существует'},
-                    status=status.HTTP_400_BAD_REQUEST)
-            user, _ = User.objects.get_or_create(
+        serializer.is_valid(raise_exception=True)
+        user, _ = User.objects.get_or_create(
                 username=serializer.validated_data.get('username'),
                 email=serializer.validated_data.get('email'),
             )
-            confirmation_code = ''.join(
-                random.choices(string.ascii_uppercase + string.digits, k=6)
-            )
-            code = ConfirmationCode.objects.create(
-                user=user, confirmation_code=confirmation_code
-            )
-            send_mail(
-                subject='Confirmation_code',
-                message=str(code.confirmation_code),
-                from_email=get_current_site(request).domain,
-                recipient_list=[serializer.data['email']],
-                fail_silently=False,
-            )
-            output_serializer = self.serializer_class(user)
-            return Response(output_serializer.data, status=status.HTTP_200_OK)
-        else:
-            data = serializer.errors
-            return Response(data, status=status.HTTP_400_BAD_REQUEST)
+        confirmation_code = default_token_generator.make_token(user)
+        code = ConfirmationCode.objects.create(
+            user=user, confirmation_code=confirmation_code
+        )
+        send_mail(
+            subject='Confirmation_code',
+            message=str(code.confirmation_code),
+            from_email=get_current_site(request).domain,
+            recipient_list=[serializer.data['email']],
+            fail_silently=False,
+        )
+        output_serializer = self.serializer_class(user)
+        return Response(output_serializer.data, status=status.HTTP_200_OK)
 
 
 class UserToken(TokenObtainPairView):
@@ -125,17 +107,11 @@ class UserToken(TokenObtainPairView):
     permission_classes = (permissions.AllowAny,)
 
     def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         username = request.data.get('username')
         if username:
             get_object_or_404(User, username=username)
-        serializer = self.get_serializer(data=request.data)
-
-        try:
-            serializer.is_valid(raise_exception=True)
-        except AuthenticationFailed:
-            return Response({'error': 'Invalid confirmation code!'},
-                            status=status.HTTP_400_BAD_REQUEST
-                            )
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
 

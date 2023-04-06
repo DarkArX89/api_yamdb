@@ -1,5 +1,9 @@
 from rest_framework import permissions
-from users.models import ADMIN, MODERATOR, USER
+
+
+USER = 'user'
+ADMIN = 'admin'
+MODERATOR = 'moderator'
 
 
 class AdminOnly(permissions.BasePermission):

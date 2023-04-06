@@ -3,14 +3,13 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 
-USER = 'user'
-ADMIN = 'admin'
-MODERATOR = 'moderator'
-
-REGEX = r'^[\w.@+-]+\Z'
-
-
 class User(AbstractUser):
+    USER = 'user'
+    ADMIN = 'admin'
+    MODERATOR = 'moderator'
+
+    REGEX = r'^[\w.@+-]+\Z'
+
     USER_ROLES = [
         (USER, 'user'),
         (ADMIN, 'administrator'),
@@ -42,13 +41,19 @@ class User(AbstractUser):
                             default=USER,
                             verbose_name='Роль')
 
-    def __str__(self):
-        return self.username
-
     class Meta:
         verbose_name = 'Пользователи'
         verbose_name_plural = 'Пользователи'
-        ordering = ['role', 'username']
+        ordering = ('role', 'username')
+        constraints = [
+            models.UniqueConstraint(
+                fields=['username', 'email'],
+                name='unique_username_owner'
+            )
+        ]
+
+    def __str__(self):
+        return self.username
 
 
 class ConfirmationCode(models.Model):
@@ -56,3 +61,11 @@ class ConfirmationCode(models.Model):
                              on_delete=models.CASCADE,
                              related_name='confirmation_code')
     confirmation_code = models.CharField(max_length=6)
+
+    class Meta:
+        verbose_name = 'Коды подтверждени пользователей'
+        verbose_name_plural = 'Коды подтверждения пользователей'
+        ordering = ('username',)
+
+    def __str__(self):
+        return self.confirmation_code
