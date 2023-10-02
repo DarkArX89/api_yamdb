@@ -65,7 +65,7 @@ class ConfirmationCode(models.Model):
     class Meta:
         verbose_name = 'Коды подтверждени пользователей'
         verbose_name_plural = 'Коды подтверждения пользователей'
-        ordering = ('username',)
+        #ordering = ('username',)
 
     def __str__(self):
         return self.confirmation_code
